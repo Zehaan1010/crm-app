@@ -1,151 +1,222 @@
 import { useState, useEffect } from 'react';
-import { createLead, updateLead } from '../api/leads.js';
+import { getLeads, deleteLead } from '../api/leads.js';
+import StatsBar from '../components/StatsBar.jsx';
+import StatusBadge from '../components/StatusBadge.jsx';
+import LeadModal from '../components/LeadModal.jsx';
 
-function LeadModal({ lead, onClose, onSaved }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [company, setCompany] = useState('');
-  const [status, setStatus] = useState('New');
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+function Dashboard() {
+  const [leads, setLeads] = useState([]);
+  const [totalLeads, setTotalLeads] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchText, setSearchText] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [leadToEdit, setLeadToEdit] = useState(null);
+  const [refreshCount, setRefreshCount] = useState(0);
 
-  useEffect(() => {
-    if (lead) {
-      setName(lead.name);
-      setEmail(lead.email);
-      setPhone(lead.phone);
-      setCompany(lead.company);
-      setStatus(lead.status);
-      setNotes(lead.notes);
-    } else {
-      setName('');
-      setEmail('');
-      setPhone('');
-      setCompany('');
-      setStatus('New');
-      setNotes('');
-    }
-  }, [lead]);
+  useEffect(function() {
+    loadLeads();
+  }, [searchText, selectedStatus, currentPage, refreshCount]);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMessage('');
-
-    var leadData = {
-      name: name,
-      email: email,
-      phone: phone,
-      company: company,
-      status: status,
-      notes: notes,
-    };
-
+  async function loadLeads() {
     try {
-      if (lead && lead._id) {
-        await updateLead(lead._id, leadData);
-      } else {
-        await createLead(leadData);
-      }
-      onSaved();
-      onClose();
+      var res = await getLeads({
+        search: searchText,
+        status: selectedStatus,
+        page: currentPage,
+        limit: 8,
+      });
+      setLeads(res.data.leads);
+      setTotalLeads(res.data.total);
+      setTotalPages(res.data.totalPages);
     } catch (err) {
-      setErrorMessage(err.response?.data?.message || 'Something went wrong. Please try again.');
+      console.log('error loading leads', err);
     }
-
-    setLoading(false);
   }
 
-  var inputStyle = {
-    width: '100%',
-    padding: '8px 12px',
-    borderRadius: '6px',
-    border: '1px solid #1a1a1a',
-    backgroundColor: '#000',
-    color: '#fff',
-    fontSize: '13px',
-    boxSizing: 'border-box',
-    outline: 'none',
-  };
+  async function handleDelete(id) {
+    var confirmed = window.confirm('Are you sure you want to delete this lead?');
+    if (!confirmed) return;
 
-  var labelStyle = {
-    display: 'block',
-    fontSize: '11px',
-    color: '#444',
-    marginBottom: '6px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.04em',
-  };
+    try {
+      await deleteLead(id);
+      setRefreshCount(refreshCount + 1);
+    } catch (err) {
+      console.log('error deleting', err);
+      alert('Could not delete lead');
+    }
+  }
+
+  function handleAddClick() {
+    setLeadToEdit(null);
+    setShowModal(true);
+  }
+
+  function handleEditClick(lead) {
+    setLeadToEdit(lead);
+    setShowModal(true);
+  }
+
+  function handleCloseModal() {
+    setShowModal(false);
+  }
+
+  function handleLeadSaved() {
+    setRefreshCount(refreshCount + 1);
+  }
+
+  function handleSearchChange(e) {
+    setSearchText(e.target.value);
+    setCurrentPage(1);
+  }
+
+  function handleStatusChange(e) {
+    setSelectedStatus(e.target.value);
+    setCurrentPage(1);
+  }
 
   return (
-    <div style={{ position: 'fixed', top: '0', left: '0', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: '1000' }}>
-      <div style={{ backgroundColor: '#111', border: '1px solid #1a1a1a', borderRadius: '10px', padding: '28px', width: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff' }}>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ margin: '0', fontSize: '16px', fontWeight: '600', color: '#fff' }}>
-            {lead && lead._id ? 'Edit Lead' : 'New Lead'}
-          </h2>
-          <button onClick={onClose} style={{ backgroundColor: '#1a1a1a', border: '1px solid #222', color: '#666', width: '30px', height: '30px', borderRadius: '6px', fontSize: '14px' }}>
-            ✕
-          </button>
+      {/* Header */}
+      <div style={{ backgroundColor: '#000', borderBottom: '1px solid #1a1a1a', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '52px' }}>
+        <div style={{ fontSize: '15px', fontWeight: '600', letterSpacing: '-0.02em', color: '#fff' }}>
+          crm<span style={{ color: '#555' }}>.</span>
+        </div>
+        <button
+          onClick={handleAddClick}
+          style={{ backgroundColor: '#fff', color: '#000', border: 'none', padding: '7px 14px', borderRadius: '6px', fontWeight: '600', fontSize: '12px', letterSpacing: '-0.01em' }}
+        >
+          + Add Lead
+        </button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+
+        {/* Stats */}
+        <StatsBar refresh={refreshCount} />
+
+        {/* Search and Filter */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+          <input
+            type="text"
+            placeholder="Search leads..."
+            value={searchText}
+            onChange={handleSearchChange}
+            style={{ flex: '1', padding: '8px 12px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#fff', fontSize: '12px', outline: 'none' }}
+          />
+          <select
+            value={selectedStatus}
+            onChange={handleStatusChange}
+            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px', outline: 'none' }}
+          >
+            <option value="" style={{ backgroundColor: '#000' }}>All statuses</option>
+            <option value="New" style={{ backgroundColor: '#000' }}>New</option>
+            <option value="Contacted" style={{ backgroundColor: '#000' }}>Contacted</option>
+            <option value="Qualified" style={{ backgroundColor: '#000' }}>Qualified</option>
+            <option value="Converted" style={{ backgroundColor: '#000' }}>Converted</option>
+            <option value="Lost" style={{ backgroundColor: '#000' }}>Lost</option>
+          </select>
         </div>
 
-        {errorMessage && (
-          <p style={{ color: '#f87171', fontSize: '13px', marginBottom: '16px' }}>{errorMessage}</p>
+        {/* Table */}
+        <div style={{ border: '1px solid #1a1a1a', borderRadius: '8px', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Name</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Email</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Company</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Status</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Created</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leads.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#333', fontSize: '13px' }}>
+                    No leads found. Click "+ Add Lead" to add one!
+                  </td>
+                </tr>
+              ) : (
+                leads.map(function(lead, index) {
+                  return (
+                    <tr
+                      key={lead._id}
+                      style={{ borderBottom: '1px solid #111' }}
+                      onMouseEnter={function(e) { e.currentTarget.style.backgroundColor = '#080808'; }}
+                      onMouseLeave={function(e) { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    >
+                      <td style={{ padding: '11px 14px', fontSize: '12px', color: '#fff', fontWeight: '500' }}>{lead.name}</td>
+                      <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>{lead.email}</td>
+                      <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>{lead.company}</td>
+                      <td style={{ padding: '11px 14px' }}>
+                        <StatusBadge status={lead.status} />
+                      </td>
+                      <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>
+                        {new Date(lead.createdAt).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: '11px 14px' }}>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={function() { handleEditClick(lead); }}
+                            style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #222', backgroundColor: '#000', color: '#666', fontSize: '10px' }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={function() { handleDelete(lead._id); }}
+                            style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#333', fontSize: '10px' }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '20px' }}>
+            <button
+              onClick={function() { setCurrentPage(currentPage - 1); }}
+              disabled={currentPage === 1}
+              style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px' }}
+            >
+              Previous
+            </button>
+            <span style={{ fontSize: '12px', color: '#333' }}>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={function() { setCurrentPage(currentPage + 1); }}
+              disabled={currentPage === totalPages}
+              style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px' }}
+            >
+              Next
+            </button>
+          </div>
         )}
-
-        <form onSubmit={handleSubmit}>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-            <div>
-              <label style={labelStyle}>Full Name</label>
-              <input type="text" value={name} onChange={function(e) { setName(e.target.value); }} required style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Email</label>
-              <input type="email" value={email} onChange={function(e) { setEmail(e.target.value); }} required style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Phone Number</label>
-              <input type="text" value={phone} onChange={function(e) { setPhone(e.target.value); }} required style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Company</label>
-              <input type="text" value={company} onChange={function(e) { setCompany(e.target.value); }} required style={inputStyle} />
-            </div>
-          </div>
-
-          <div style={{ marginTop: '14px' }}>
-            <label style={labelStyle}>Status</label>
-            <select value={status} onChange={function(e) { setStatus(e.target.value); }} style={{ ...inputStyle }}>
-              <option value="New" style={{ backgroundColor: '#111' }}>New</option>
-              <option value="Contacted" style={{ backgroundColor: '#111' }}>Contacted</option>
-              <option value="Qualified" style={{ backgroundColor: '#111' }}>Qualified</option>
-              <option value="Converted" style={{ backgroundColor: '#111' }}>Converted</option>
-              <option value="Lost" style={{ backgroundColor: '#111' }}>Lost</option>
-            </select>
-          </div>
-
-          <div style={{ marginTop: '14px', marginBottom: '24px' }}>
-            <label style={labelStyle}>Notes</label>
-            <textarea value={notes} onChange={function(e) { setNotes(e.target.value); }} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
-          </div>
-
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-            <button type="button" onClick={onClose} style={{ padding: '9px 18px', borderRadius: '6px', border: '1px solid #222', backgroundColor: 'transparent', color: '#888', fontSize: '13px' }}>
-              Cancel
-            </button>
-            <button type="submit" disabled={loading} style={{ padding: '9px 20px', borderRadius: '6px', border: 'none', backgroundColor: '#fff', color: '#000', fontSize: '13px', fontWeight: '600' }}>
-              {loading ? 'Saving...' : lead && lead._id ? 'Update Lead' : 'Add Lead'}
-            </button>
-          </div>
-
-        </form>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <LeadModal
+          lead={leadToEdit}
+          onClose={handleCloseModal}
+          onSaved={handleLeadSaved}
+        />
+      )}
+
     </div>
   );
 }
 
-export default LeadModal;
+export default Dashboard;

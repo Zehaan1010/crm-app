@@ -11,9 +11,9 @@ function StatsBar({ refresh }) {
 
   useEffect(() => {
     getStats().then(function(res) {
-      setTotalLeads(res.data.total);
+      setTotalLeads(res.total);
 
-      var statsArray = res.data.stats;
+      var statsArray = res.stats;
 
       for (var i = 0; i < statsArray.length; i++) {
         if (statsArray[i]._id === 'New') {

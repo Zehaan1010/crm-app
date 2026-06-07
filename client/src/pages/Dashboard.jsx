@@ -13,6 +13,7 @@ function Dashboard() {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [leadToEdit, setLeadToEdit] = useState(null);
+  const [loading, setLoading] = useState(false); // added loading state
   const [refreshCount, setRefreshCount] = useState(0);
 
   useEffect(function() {
@@ -20,6 +21,7 @@ function Dashboard() {
   }, [searchText, selectedStatus, currentPage, refreshCount]);
 
   async function loadLeads() {
+    setLoading(true);
     try {
       var res = await getLeads({
         search: searchText,
@@ -27,12 +29,14 @@ function Dashboard() {
         page: currentPage,
         limit: 8,
       });
-      setLeads(res.data.leads);
-      setTotalLeads(res.data.total);
-      setTotalPages(res.data.totalPages);
+      // NOTE: fetch() returns json directly, not wrapped in .data like axios does
+      setLeads(res.leads);
+      setTotalLeads(res.total);
+      setTotalPages(res.totalPages);
     } catch (err) {
       console.log('error loading leads', err);
     }
+    setLoading(false);
   }
 
   async function handleDelete(id) {
@@ -120,67 +124,81 @@ function Dashboard() {
           </select>
         </div>
 
+        {/* show how many leads we found */}
+        <p style={{ fontSize: '11px', color: '#333', marginBottom: '12px' }}>
+          {totalLeads} lead{totalLeads !== 1 ? 's' : ''} total
+        </p>
+
+        {/* loading state */}
+        {loading && (
+          <p style={{ textAlign: 'center', color: '#444', fontSize: '13px', padding: '40px' }}>
+            Loading...
+          </p>
+        )}
+
         {/* Table */}
-        <div style={{ border: '1px solid #1a1a1a', borderRadius: '8px', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Name</th>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Email</th>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Company</th>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Status</th>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Created</th>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leads.length === 0 ? (
+        {!loading && (
+          <div style={{ border: '1px solid #1a1a1a', borderRadius: '8px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
                 <tr>
-                  <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#333', fontSize: '13px' }}>
-                    No leads found. Click "+ Add Lead" to add one!
-                  </td>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Name</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Email</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Company</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Status</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Created</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Actions</th>
                 </tr>
-              ) : (
-                leads.map(function(lead, index) {
-                  return (
-                    <tr
-                      key={lead._id}
-                      style={{ borderBottom: '1px solid #111' }}
-                      onMouseEnter={function(e) { e.currentTarget.style.backgroundColor = '#080808'; }}
-                      onMouseLeave={function(e) { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                    >
-                      <td style={{ padding: '11px 14px', fontSize: '12px', color: '#fff', fontWeight: '500' }}>{lead.name}</td>
-                      <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>{lead.email}</td>
-                      <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>{lead.company}</td>
-                      <td style={{ padding: '11px 14px' }}>
-                        <StatusBadge status={lead.status} />
-                      </td>
-                      <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>
-                        {new Date(lead.createdAt).toLocaleDateString()}
-                      </td>
-                      <td style={{ padding: '11px 14px' }}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button
-                            onClick={function() { handleEditClick(lead); }}
-                            style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #222', backgroundColor: '#000', color: '#666', fontSize: '10px' }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={function() { handleDelete(lead._id); }}
-                            style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#333', fontSize: '10px' }}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {leads.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#333', fontSize: '13px' }}>
+                      No leads found. Click "+ Add Lead" to add one!
+                    </td>
+                  </tr>
+                ) : (
+                  leads.map(function(lead, index) {
+                    return (
+                      <tr
+                        key={lead._id}
+                        style={{ borderBottom: '1px solid #111' }}
+                        onMouseEnter={function(e) { e.currentTarget.style.backgroundColor = '#080808'; }}
+                        onMouseLeave={function(e) { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <td style={{ padding: '11px 14px', fontSize: '12px', color: '#fff', fontWeight: '500' }}>{lead.name}</td>
+                        <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>{lead.email}</td>
+                        <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>{lead.company}</td>
+                        <td style={{ padding: '11px 14px' }}>
+                          <StatusBadge status={lead.status} />
+                        </td>
+                        <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>
+                          {new Date(lead.createdAt).toLocaleDateString()}
+                        </td>
+                        <td style={{ padding: '11px 14px' }}>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              onClick={function() { handleEditClick(lead); }}
+                              style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #222', backgroundColor: '#000', color: '#666', fontSize: '10px', cursor: 'pointer' }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={function() { handleDelete(lead._id); }}
+                              style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#333', fontSize: '10px', cursor: 'pointer' }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Pagination */}
         {totalPages > 1 && (
@@ -188,7 +206,7 @@ function Dashboard() {
             <button
               onClick={function() { setCurrentPage(currentPage - 1); }}
               disabled={currentPage === 1}
-              style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px' }}
+              style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px', cursor: 'pointer' }}
             >
               Previous
             </button>
@@ -198,7 +216,7 @@ function Dashboard() {
             <button
               onClick={function() { setCurrentPage(currentPage + 1); }}
               disabled={currentPage === totalPages}
-              style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px' }}
+              style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px', cursor: 'pointer' }}
             >
               Next
             </button>
