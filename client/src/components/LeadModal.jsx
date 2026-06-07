@@ -30,7 +30,7 @@ export default function LeadModal({ lead, onClose, onSaved }) {
       onSaved();
       onClose();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Something went wrong');
+      toast.error(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }

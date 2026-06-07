@@ -15,8 +15,8 @@ export default function StatsBar({ refresh }) {
   const [stats, setStats] = useState({ total: 0, stats: [] });
 
   useEffect(() => {
-    getStats().then(r => setStats(r.data));
-  }, [refresh]);
+  getStats().then(data => setStats(data));
+}, [refresh]);
 
   const getCount = (status) => {
     const found = stats.stats.find(s => s._id === status);

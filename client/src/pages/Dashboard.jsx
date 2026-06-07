@@ -22,10 +22,10 @@ export default function Dashboard() {
 
   const fetchLeads = useCallback(async () => {
     try {
-      const res = await getLeads({ search, status, sort, order, page, limit: 8 });
-      setLeads(res.data.leads);
-      setTotal(res.data.total);
-      setTotalPages(res.data.totalPages);
+      const data = await getLeads({ search, status, sort, order, page, limit: 8 });
+      setLeads(data.leads);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
     } catch {
       toast.error('Failed to fetch leads');
     }
