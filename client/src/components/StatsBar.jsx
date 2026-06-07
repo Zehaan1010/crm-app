@@ -64,27 +64,27 @@ function StatsBar({ refresh, darkMode }) {
       </div>
 
       <div style={{ backgroundColor: cardBg, padding: '20px 24px', flex: '1', borderLeft: '1px solid ' + borderCol }}>
-        <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.03em', color: '#3b82f6', lineHeight: '1' }}>{newCount}</div>
+        <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.03em', color: '#ffffff', lineHeight: '1' }}>{newCount}</div>
         <div style={{ fontSize: '13px', color: labelColor, marginTop: '6px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>New</div>
       </div>
 
       <div style={{ backgroundColor: cardBg, padding: '20px 24px', flex: '1', borderLeft: '1px solid ' + borderCol }}>
-        <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.03em', color: '#f59e0b', lineHeight: '1' }}>{contactedCount}</div>
+        <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.03em', color: '#ffffff', lineHeight: '1' }}>{contactedCount}</div>
         <div style={{ fontSize: '13px', color: labelColor, marginTop: '6px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Contacted</div>
       </div>
 
       <div style={{ backgroundColor: cardBg, padding: '20px 24px', flex: '1', borderLeft: '1px solid ' + borderCol }}>
-        <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.03em', color: '#8b5cf6', lineHeight: '1' }}>{qualifiedCount}</div>
+        <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.03em', color: '#ffffff', lineHeight: '1' }}>{qualifiedCount}</div>
         <div style={{ fontSize: '13px', color: labelColor, marginTop: '6px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Qualified</div>
       </div>
 
       <div style={{ backgroundColor: cardBg, padding: '20px 24px', flex: '1', borderLeft: '1px solid ' + borderCol }}>
-        <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.03em', color: '#22c55e', lineHeight: '1' }}>{convertedCount}</div>
+        <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.03em', color: '#ffffff', lineHeight: '1' }}>{convertedCount}</div>
         <div style={{ fontSize: '13px', color: labelColor, marginTop: '6px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Converted</div>
       </div>
 
       <div style={{ backgroundColor: cardBg, padding: '20px 24px', flex: '1', borderLeft: '1px solid ' + borderCol }}>
-        <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.03em', color: '#ef4444', lineHeight: '1' }}>{lostCount}</div>
+        <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.03em', color: '#ffffff', lineHeight: '1' }}>{lostCount}</div>
         <div style={{ fontSize: '13px', color: labelColor, marginTop: '6px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Lost</div>
       </div>
 
