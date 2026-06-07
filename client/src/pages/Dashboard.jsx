@@ -4,7 +4,9 @@ import StatsBar from '../components/StatsBar.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import LeadModal from '../components/LeadModal.jsx';
 
-function Dashboard() {
+function Dashboard({ darkMode, toggleTheme }) {
+
+  // state variables
   const [leads, setLeads] = useState([]);
   const [totalLeads, setTotalLeads] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -13,9 +15,31 @@ function Dashboard() {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [leadToEdit, setLeadToEdit] = useState(null);
-  const [loading, setLoading] = useState(false); // added loading state
+  const [loading, setLoading] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
 
+  // colors change depending on dark or light mode
+  var bgColor = '#000000';
+  var surfaceColor = '#0a0a0a';
+  var borderColor = '#1f1f1f';
+  var mainText = '#ffffff';
+  var secondaryText = '#666666';
+  var mutedText = '#333333';
+  var inputBackground = '#000000';
+  var navBackground = '#000000';
+
+  if (darkMode === false) {
+    bgColor = '#f4f4f5';
+    surfaceColor = '#ffffff';
+    borderColor = '#aaaaaa';  // darker so you can actually see it
+    mainText = '#111111';
+    secondaryText = '#555555';
+    mutedText = '#999999';
+    inputBackground = '#ffffff';
+    navBackground = '#ffffff';
+  }
+
+  // run loadLeads whenever these things change
   useEffect(function() {
     loadLeads();
   }, [searchText, selectedStatus, currentPage, refreshCount]);
@@ -29,17 +53,19 @@ function Dashboard() {
         page: currentPage,
         limit: 8,
       });
-      // NOTE: fetch() returns json directly, not wrapped in .data like axios does
+      // important: fetch() gives back json directly, NOT res.data like axios would
+      // took me a while to figure this out lol
       setLeads(res.leads);
       setTotalLeads(res.total);
       setTotalPages(res.totalPages);
     } catch (err) {
-      console.log('error loading leads', err);
+      console.log('error loading leads:', err);
     }
     setLoading(false);
   }
 
   async function handleDelete(id) {
+    // ask user before deleting
     var confirmed = window.confirm('Are you sure you want to delete this lead?');
     if (!confirmed) return;
 
@@ -47,8 +73,8 @@ function Dashboard() {
       await deleteLead(id);
       setRefreshCount(refreshCount + 1);
     } catch (err) {
-      console.log('error deleting', err);
-      alert('Could not delete lead');
+      console.log('delete failed:', err);
+      alert('Could not delete. Please try again.');
     }
   }
 
@@ -67,12 +93,13 @@ function Dashboard() {
   }
 
   function handleLeadSaved() {
+    // refresh the list after saving
     setRefreshCount(refreshCount + 1);
   }
 
   function handleSearchChange(e) {
     setSearchText(e.target.value);
-    setCurrentPage(1);
+    setCurrentPage(1); // go back to page 1 when searching
   }
 
   function handleStatusChange(e) {
@@ -81,80 +108,135 @@ function Dashboard() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: bgColor, color: mainText }}>
 
-      {/* Header */}
-      <div style={{ backgroundColor: '#000', borderBottom: '1px solid #1a1a1a', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '52px' }}>
-        <div style={{ fontSize: '15px', fontWeight: '600', letterSpacing: '-0.02em', color: '#fff' }}>
-          crm<span style={{ color: '#555' }}>.</span>
+      {/* top navbar */}
+      <div style={{
+        backgroundColor: navBackground,
+        borderBottom: '1px solid ' + borderColor,
+        padding: '0 36px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        height: '68px'
+      }}>
+        <div style={{ fontSize: '22px', fontWeight: '700', letterSpacing: '-0.02em', color: mainText }}>
+          crm<span style={{ color: secondaryText }}>.</span>
         </div>
-        <button
-          onClick={handleAddClick}
-          style={{ backgroundColor: '#fff', color: '#000', border: 'none', padding: '7px 14px', borderRadius: '6px', fontWeight: '600', fontSize: '12px', letterSpacing: '-0.01em' }}
-        >
-          + Add Lead
-        </button>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {/* theme toggle button */}
+          <button
+            onClick={toggleTheme}
+            style={{
+              backgroundColor: 'transparent',
+              border: '1px solid ' + borderColor,
+              color: secondaryText,
+              padding: '9px 18px',
+              borderRadius: '8px',
+              fontSize: '15px',
+              cursor: 'pointer'
+            }}
+          >
+            {darkMode ? '☀️ Light mode' : '🌙 Dark mode'}
+          </button>
+
+          <button
+            onClick={handleAddClick}
+            style={{
+              backgroundColor: darkMode ? '#ffffff' : '#111111',
+              color: darkMode ? '#000000' : '#ffffff',
+              border: 'none',
+              padding: '9px 20px',
+              borderRadius: '8px',
+              fontWeight: '600',
+              fontSize: '15px',
+              cursor: 'pointer'
+            }}
+          >
+            + Add Lead
+          </button>
+        </div>
       </div>
 
-      <div style={{ padding: '20px' }}>
+      <div style={{ padding: '36px' }}>
 
-        {/* Stats */}
-        <StatsBar refresh={refreshCount} />
+        {/* stats section at top */}
+        <StatsBar refresh={refreshCount} darkMode={darkMode} />
 
-        {/* Search and Filter */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+        {/* search bar and status filter */}
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
           <input
             type="text"
-            placeholder="Search leads..."
+            placeholder="Search by name, email or company..."
             value={searchText}
             onChange={handleSearchChange}
-            style={{ flex: '1', padding: '8px 12px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#fff', fontSize: '12px', outline: 'none' }}
+            style={{
+              flex: '1',
+              padding: '12px 18px',
+              borderRadius: '8px',
+              border: '1px solid ' + borderColor,
+              backgroundColor: inputBackground,
+              color: mainText,
+              fontSize: '16px',
+              outline: 'none'
+            }}
           />
           <select
             value={selectedStatus}
             onChange={handleStatusChange}
-            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px', outline: 'none' }}
+            style={{
+              padding: '12px 18px',
+              borderRadius: '8px',
+              border: '1px solid ' + borderColor,
+              backgroundColor: inputBackground,
+              color: secondaryText,
+              fontSize: '16px',
+              outline: 'none',
+              cursor: 'pointer'
+            }}
           >
-            <option value="" style={{ backgroundColor: '#000' }}>All statuses</option>
-            <option value="New" style={{ backgroundColor: '#000' }}>New</option>
-            <option value="Contacted" style={{ backgroundColor: '#000' }}>Contacted</option>
-            <option value="Qualified" style={{ backgroundColor: '#000' }}>Qualified</option>
-            <option value="Converted" style={{ backgroundColor: '#000' }}>Converted</option>
-            <option value="Lost" style={{ backgroundColor: '#000' }}>Lost</option>
+            <option value="">All statuses</option>
+            <option value="New">New</option>
+            <option value="Contacted">Contacted</option>
+            <option value="Qualified">Qualified</option>
+            <option value="Converted">Converted</option>
+            <option value="Lost">Lost</option>
           </select>
         </div>
 
-        {/* show how many leads we found */}
-        <p style={{ fontSize: '11px', color: '#333', marginBottom: '12px' }}>
+        {/* show total count */}
+        <p style={{ fontSize: '14px', color: mutedText, marginBottom: '16px' }}>
           {totalLeads} lead{totalLeads !== 1 ? 's' : ''} total
         </p>
 
-        {/* loading state */}
+        {/* show loading text while fetching */}
         {loading && (
-          <p style={{ textAlign: 'center', color: '#444', fontSize: '13px', padding: '40px' }}>
+          <p style={{ textAlign: 'center', color: secondaryText, fontSize: '16px', padding: '60px' }}>
             Loading...
           </p>
         )}
 
-        {/* Table */}
+        {/* leads table - only show when not loading */}
         {!loading && (
-          <div style={{ border: '1px solid #1a1a1a', borderRadius: '8px', overflow: 'hidden' }}>
+          <div style={{ border: '1px solid ' + borderColor, borderRadius: '10px', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Name</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Email</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Company</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Status</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Created</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Actions</th>
+                  <th style={{ padding: '16px 22px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: mutedText, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid ' + borderColor, backgroundColor: surfaceColor }}>Name</th>
+                  <th style={{ padding: '16px 22px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: mutedText, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid ' + borderColor, backgroundColor: surfaceColor }}>Email</th>
+                  <th style={{ padding: '16px 22px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: mutedText, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid ' + borderColor, backgroundColor: surfaceColor }}>Company</th>
+                  <th style={{ padding: '16px 22px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: mutedText, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid ' + borderColor, backgroundColor: surfaceColor }}>Status</th>
+                  <th style={{ padding: '16px 22px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: mutedText, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid ' + borderColor, backgroundColor: surfaceColor }}>Created</th>
+                  <th style={{ padding: '16px 22px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: mutedText, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid ' + borderColor, backgroundColor: surfaceColor }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
+                {/* show message if no leads */}
                 {leads.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#333', fontSize: '13px' }}>
-                      No leads found. Click "+ Add Lead" to add one!
+                    <td colSpan="6" style={{ padding: '60px', textAlign: 'center', color: mutedText, fontSize: '16px', backgroundColor: surfaceColor }}>
+                      No leads found. Click "+ Add Lead" to get started!
                     </td>
                   </tr>
                 ) : (
@@ -162,30 +244,34 @@ function Dashboard() {
                     return (
                       <tr
                         key={lead._id}
-                        style={{ borderBottom: '1px solid #111' }}
-                        onMouseEnter={function(e) { e.currentTarget.style.backgroundColor = '#080808'; }}
-                        onMouseLeave={function(e) { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        style={{ borderBottom: '1px solid ' + borderColor, backgroundColor: surfaceColor }}
+                        onMouseEnter={function(e) {
+                          e.currentTarget.style.backgroundColor = darkMode ? '#0d0d0d' : '#fafafa';
+                        }}
+                        onMouseLeave={function(e) {
+                          e.currentTarget.style.backgroundColor = surfaceColor;
+                        }}
                       >
-                        <td style={{ padding: '11px 14px', fontSize: '12px', color: '#fff', fontWeight: '500' }}>{lead.name}</td>
-                        <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>{lead.email}</td>
-                        <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>{lead.company}</td>
-                        <td style={{ padding: '11px 14px' }}>
+                        <td style={{ padding: '17px 22px', fontSize: '16px', color: mainText, fontWeight: '500' }}>{lead.name}</td>
+                        <td style={{ padding: '17px 22px', fontSize: '16px', color: secondaryText }}>{lead.email}</td>
+                        <td style={{ padding: '17px 22px', fontSize: '16px', color: secondaryText }}>{lead.company}</td>
+                        <td style={{ padding: '17px 22px' }}>
                           <StatusBadge status={lead.status} />
                         </td>
-                        <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>
+                        <td style={{ padding: '17px 22px', fontSize: '16px', color: secondaryText }}>
                           {new Date(lead.createdAt).toLocaleDateString()}
                         </td>
-                        <td style={{ padding: '11px 14px' }}>
-                          <div style={{ display: 'flex', gap: '6px' }}>
+                        <td style={{ padding: '17px 22px' }}>
+                          <div style={{ display: 'flex', gap: '8px' }}>
                             <button
                               onClick={function() { handleEditClick(lead); }}
-                              style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #222', backgroundColor: '#000', color: '#666', fontSize: '10px', cursor: 'pointer' }}
+                              style={{ padding: '7px 16px', borderRadius: '6px', border: '1px solid ' + borderColor, backgroundColor: surfaceColor, color: secondaryText, fontSize: '14px', cursor: 'pointer' }}
                             >
                               Edit
                             </button>
                             <button
                               onClick={function() { handleDelete(lead._id); }}
-                              style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#333', fontSize: '10px', cursor: 'pointer' }}
+                              style={{ padding: '7px 16px', borderRadius: '6px', border: '1px solid ' + borderColor, backgroundColor: surfaceColor, color: mutedText, fontSize: '14px', cursor: 'pointer' }}
                             >
                               Delete
                             </button>
@@ -200,23 +286,23 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* pagination buttons - only show if more than 1 page */}
         {totalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '28px' }}>
             <button
               onClick={function() { setCurrentPage(currentPage - 1); }}
               disabled={currentPage === 1}
-              style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px', cursor: 'pointer' }}
+              style={{ padding: '10px 22px', borderRadius: '8px', border: '1px solid ' + borderColor, backgroundColor: surfaceColor, color: secondaryText, fontSize: '15px', cursor: 'pointer' }}
             >
               Previous
             </button>
-            <span style={{ fontSize: '12px', color: '#333' }}>
+            <span style={{ fontSize: '15px', color: mutedText }}>
               Page {currentPage} of {totalPages}
             </span>
             <button
               onClick={function() { setCurrentPage(currentPage + 1); }}
               disabled={currentPage === totalPages}
-              style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px', cursor: 'pointer' }}
+              style={{ padding: '10px 22px', borderRadius: '8px', border: '1px solid ' + borderColor, backgroundColor: surfaceColor, color: secondaryText, fontSize: '15px', cursor: 'pointer' }}
             >
               Next
             </button>
@@ -224,12 +310,13 @@ function Dashboard() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* modal for add/edit */}
       {showModal && (
         <LeadModal
           lead={leadToEdit}
           onClose={handleCloseModal}
           onSaved={handleLeadSaved}
+          darkMode={darkMode}
         />
       )}
 
