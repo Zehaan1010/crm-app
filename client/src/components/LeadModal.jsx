@@ -1,103 +1,151 @@
 import { useState, useEffect } from 'react';
-import { createLead, updateLead } from '../api/leads';
-import toast from 'react-hot-toast';
+import { createLead, updateLead } from '../api/leads.js';
 
-const STATUSES = ['New', 'Contacted', 'Qualified', 'Converted', 'Lost'];
-const EMPTY = { name: '', email: '', phone: '', company: '', status: 'New', notes: '' };
-
-export default function LeadModal({ lead, onClose, onSaved }) {
-  const [form, setForm] = useState(EMPTY);
+function LeadModal({ lead, onClose, onSaved }) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [company, setCompany] = useState('');
+  const [status, setStatus] = useState('New');
+  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    if (lead) setForm(lead);
-    else setForm(EMPTY);
+    if (lead) {
+      setName(lead.name);
+      setEmail(lead.email);
+      setPhone(lead.phone);
+      setCompany(lead.company);
+      setStatus(lead.status);
+      setNotes(lead.notes);
+    } else {
+      setName('');
+      setEmail('');
+      setPhone('');
+      setCompany('');
+      setStatus('New');
+      setNotes('');
+    }
   }, [lead]);
 
-  const handle = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
-
-  const submit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage('');
+
+    var leadData = {
+      name: name,
+      email: email,
+      phone: phone,
+      company: company,
+      status: status,
+      notes: notes,
+    };
+
     try {
-      if (lead?._id) {
-        await updateLead(lead._id, form);
-        toast.success('Lead updated!');
+      if (lead && lead._id) {
+        await updateLead(lead._id, leadData);
       } else {
-        await createLead(form);
-        toast.success('Lead created!');
+        await createLead(leadData);
       }
       onSaved();
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Something went wrong');
-    } finally {
-      setLoading(false);
+      setErrorMessage(err.response?.data?.message || 'Something went wrong. Please try again.');
     }
+
+    setLoading(false);
+  }
+
+  var inputStyle = {
+    width: '100%',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    border: '1px solid #1a1a1a',
+    backgroundColor: '#000',
+    color: '#fff',
+    fontSize: '13px',
+    boxSizing: 'border-box',
+    outline: 'none',
+  };
+
+  var labelStyle = {
+    display: 'block',
+    fontSize: '11px',
+    color: '#444',
+    marginBottom: '6px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
   };
 
   return (
-    <div style={overlay}>
-      <div style={modal}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 700 }}>{lead?._id ? 'Edit Lead' : 'Add New Lead'}</h2>
-          <button onClick={onClose} style={closeBtn}>✕</button>
+    <div style={{ position: 'fixed', top: '0', left: '0', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: '1000' }}>
+      <div style={{ backgroundColor: '#111', border: '1px solid #1a1a1a', borderRadius: '10px', padding: '28px', width: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h2 style={{ margin: '0', fontSize: '16px', fontWeight: '600', color: '#fff' }}>
+            {lead && lead._id ? 'Edit Lead' : 'New Lead'}
+          </h2>
+          <button onClick={onClose} style={{ backgroundColor: '#1a1a1a', border: '1px solid #222', color: '#666', width: '30px', height: '30px', borderRadius: '6px', fontSize: '14px' }}>
+            ✕
+          </button>
         </div>
 
-        <form onSubmit={submit}>
-          {[
-            { label: 'Full Name',     name: 'name',    type: 'text' },
-            { label: 'Email',         name: 'email',   type: 'email' },
-            { label: 'Phone Number',  name: 'phone',   type: 'text' },
-            { label: 'Company Name',  name: 'company', type: 'text' },
-          ].map(f => (
-            <div key={f.name} style={{ marginBottom: '14px' }}>
-              <label style={labelStyle}>{f.label}</label>
-              <input
-                name={f.name}
-                type={f.type}
-                value={form[f.name]}
-                onChange={handle}
-                required
-                style={inputStyle}
-              />
-            </div>
-          ))}
+        {errorMessage && (
+          <p style={{ color: '#f87171', fontSize: '13px', marginBottom: '16px' }}>{errorMessage}</p>
+        )}
 
-          <div style={{ marginBottom: '14px' }}>
+        <form onSubmit={handleSubmit}>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            <div>
+              <label style={labelStyle}>Full Name</label>
+              <input type="text" value={name} onChange={function(e) { setName(e.target.value); }} required style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Email</label>
+              <input type="email" value={email} onChange={function(e) { setEmail(e.target.value); }} required style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Phone Number</label>
+              <input type="text" value={phone} onChange={function(e) { setPhone(e.target.value); }} required style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Company</label>
+              <input type="text" value={company} onChange={function(e) { setCompany(e.target.value); }} required style={inputStyle} />
+            </div>
+          </div>
+
+          <div style={{ marginTop: '14px' }}>
             <label style={labelStyle}>Status</label>
-            <select name="status" value={form.status} onChange={handle} style={inputStyle}>
-              {STATUSES.map(s => <option key={s}>{s}</option>)}
+            <select value={status} onChange={function(e) { setStatus(e.target.value); }} style={{ ...inputStyle }}>
+              <option value="New" style={{ backgroundColor: '#111' }}>New</option>
+              <option value="Contacted" style={{ backgroundColor: '#111' }}>Contacted</option>
+              <option value="Qualified" style={{ backgroundColor: '#111' }}>Qualified</option>
+              <option value="Converted" style={{ backgroundColor: '#111' }}>Converted</option>
+              <option value="Lost" style={{ backgroundColor: '#111' }}>Lost</option>
             </select>
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
+          <div style={{ marginTop: '14px', marginBottom: '24px' }}>
             <label style={labelStyle}>Notes</label>
-            <textarea
-              name="notes"
-              value={form.notes}
-              onChange={handle}
-              rows={3}
-              style={{ ...inputStyle, resize: 'vertical' }}
-            />
+            <textarea value={notes} onChange={function(e) { setNotes(e.target.value); }} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <button type="button" onClick={onClose} style={cancelBtn}>Cancel</button>
-            <button type="submit" disabled={loading} style={submitBtn}>
-              {loading ? 'Saving...' : lead?._id ? 'Update Lead' : 'Add Lead'}
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <button type="button" onClick={onClose} style={{ padding: '9px 18px', borderRadius: '6px', border: '1px solid #222', backgroundColor: 'transparent', color: '#888', fontSize: '13px' }}>
+              Cancel
+            </button>
+            <button type="submit" disabled={loading} style={{ padding: '9px 20px', borderRadius: '6px', border: 'none', backgroundColor: '#fff', color: '#000', fontSize: '13px', fontWeight: '600' }}>
+              {loading ? 'Saving...' : lead && lead._id ? 'Update Lead' : 'Add Lead'}
             </button>
           </div>
+
         </form>
       </div>
     </div>
   );
 }
 
-const overlay  = { position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000 };
-const modal    = { background:'#fff',borderRadius:'16px',padding:'28px',width:'100%',maxWidth:'480px',maxHeight:'90vh',overflowY:'auto' };
-const closeBtn = { background:'none',border:'none',fontSize:'18px',cursor:'pointer',color:'#666' };
-const labelStyle = { display:'block',fontSize:'13px',fontWeight:600,marginBottom:'6px',color:'#444' };
-const inputStyle = { width:'100%',padding:'10px 12px',borderRadius:'8px',border:'1px solid #ddd',fontSize:'14px',outline:'none' };
-const cancelBtn  = { padding:'10px 20px',borderRadius:'8px',border:'1px solid #ddd',background:'#fff',fontSize:'14px' };
-const submitBtn  = { padding:'10px 20px',borderRadius:'8px',border:'none',background:'#1a1a2e',color:'#fff',fontSize:'14px' };
+export default LeadModal;

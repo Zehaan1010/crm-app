@@ -1,23 +1,44 @@
-const colors = {
-  New:       { bg: '#dbeafe', text: '#1d4ed8' },
-  Contacted: { bg: '#fef9c3', text: '#854d0e' },
-  Qualified: { bg: '#ede9fe', text: '#6d28d9' },
-  Converted: { bg: '#dcfce7', text: '#166534' },
-  Lost:      { bg: '#fee2e2', text: '#991b1b' },
-};
+function StatusBadge({ status }) {
+  let backgroundColor = '#111';
+  let textColor = '#fff';
+  let borderColor = '#222';
 
-export default function StatusBadge({ status }) {
-  const c = colors[status] || colors.New;
+  if (status === 'New') {
+    backgroundColor = '#111';
+    textColor = '#fff';
+    borderColor = '#222';
+  } else if (status === 'Contacted') {
+    backgroundColor = '#111';
+    textColor = '#888';
+    borderColor = '#222';
+  } else if (status === 'Qualified') {
+    backgroundColor = '#fff';
+    textColor = '#000';
+    borderColor = '#fff';
+  } else if (status === 'Converted') {
+    backgroundColor = '#1a1a1a';
+    textColor = '#aaa';
+    borderColor = '#333';
+  } else if (status === 'Lost') {
+    backgroundColor = '#111';
+    textColor = '#444';
+    borderColor = '#1a1a1a';
+  }
+
   return (
     <span style={{
-      backgroundColor: c.bg,
-      color: c.text,
-      padding: '3px 10px',
-      borderRadius: '999px',
-      fontSize: '12px',
-      fontWeight: 600,
+      backgroundColor: backgroundColor,
+      color: textColor,
+      border: '1px solid ' + borderColor,
+      padding: '2px 8px',
+      borderRadius: '4px',
+      fontSize: '10px',
+      fontWeight: '500',
+      letterSpacing: '0.03em',
     }}>
       {status}
     </span>
   );
 }
+
+export default StatusBadge;

@@ -5,9 +5,9 @@
 }
 
 body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #f0f2f5;
-  color: #1a1a2e;
+  font-family: 'Inter', sans-serif;
+  background-color: #000000;
+  color: white;
 }
 
 button {

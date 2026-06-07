@@ -1,137 +1,183 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getLeads, deleteLead } from '../api/leads';
-import StatsBar from '../components/StatsBar';
-import StatusBadge from '../components/StatusBadge';
-import LeadModal from '../components/LeadModal';
-import toast, { Toaster } from 'react-hot-toast';
+import { useState, useEffect } from 'react';
+import { getLeads, deleteLead } from '../api/leads.js';
+import StatsBar from '../components/StatsBar.jsx';
+import StatusBadge from '../components/StatusBadge.jsx';
+import LeadModal from '../components/LeadModal.jsx';
 
-const STATUSES = ['', 'New', 'Contacted', 'Qualified', 'Converted', 'Lost'];
-
-export default function Dashboard() {
-  const [leads, setLeads]         = useState([]);
-  const [total, setTotal]         = useState(0);
+function Dashboard() {
+  const [leads, setLeads] = useState([]);
+  const [totalLeads, setTotalLeads] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage]           = useState(1);
-  const [search, setSearch]       = useState('');
-  const [status, setStatus]       = useState('');
-  const [sort, setSort]           = useState('createdAt');
-  const [order, setOrder]         = useState('desc');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editLead, setEditLead]   = useState(null);
-  const [refresh, setRefresh]     = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchText, setSearchText] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [leadToEdit, setLeadToEdit] = useState(null);
+  const [refreshCount, setRefreshCount] = useState(0);
 
-  const fetchLeads = useCallback(async () => {
+  useEffect(function() {
+    loadLeads();
+  }, [searchText, selectedStatus, currentPage, refreshCount]);
+
+  async function loadLeads() {
     try {
-      const data = await getLeads({ search, status, sort, order, page, limit: 8 });
-      setLeads(data.leads);
-      setTotal(data.total);
-      setTotalPages(data.totalPages);
-    } catch {
-      toast.error('Failed to fetch leads');
+      var res = await getLeads({
+        search: searchText,
+        status: selectedStatus,
+        page: currentPage,
+        limit: 8,
+      });
+      setLeads(res.data.leads);
+      setTotalLeads(res.data.total);
+      setTotalPages(res.data.totalPages);
+    } catch (err) {
+      console.log('error loading leads', err);
     }
-  }, [search, status, sort, order, page]);
+  }
 
-  useEffect(() => { fetchLeads(); }, [fetchLeads, refresh]);
+  async function handleDelete(id) {
+    var confirmed = window.confirm('Are you sure you want to delete this lead?');
+    if (!confirmed) return;
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this lead?')) return;
     try {
       await deleteLead(id);
-      toast.success('Lead deleted');
-      setRefresh(r => r + 1);
-    } catch {
-      toast.error('Failed to delete');
+      setRefreshCount(refreshCount + 1);
+    } catch (err) {
+      console.log('error deleting', err);
+      alert('Could not delete lead');
     }
-  };
+  }
 
-  const openAdd  = () => { setEditLead(null); setModalOpen(true); };
-  const openEdit = (lead) => { setEditLead(lead); setModalOpen(true); };
-  const onSaved  = () => setRefresh(r => r + 1);
+  function handleAddClick() {
+    setLeadToEdit(null);
+    setShowModal(true);
+  }
 
-  const toggleSort = (field) => {
-    if (sort === field) setOrder(o => o === 'asc' ? 'desc' : 'asc');
-    else { setSort(field); setOrder('asc'); }
-  };
+  function handleEditClick(lead) {
+    setLeadToEdit(lead);
+    setShowModal(true);
+  }
+
+  function handleCloseModal() {
+    setShowModal(false);
+  }
+
+  function handleLeadSaved() {
+    setRefreshCount(refreshCount + 1);
+  }
+
+  function handleSearchChange(e) {
+    setSearchText(e.target.value);
+    setCurrentPage(1);
+  }
+
+  function handleStatusChange(e) {
+    setSelectedStatus(e.target.value);
+    setCurrentPage(1);
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0f2f5' }}>
-      <Toaster position="top-right" />
+    <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff' }}>
 
       {/* Header */}
-      <div style={{ background: '#1a1a2e', padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ color: '#fff', fontSize: '20px', fontWeight: 700 }}>🎯 Lead CRM</h1>
-        <button onClick={openAdd} style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 600 }}>
+      <div style={{ backgroundColor: '#000', borderBottom: '1px solid #1a1a1a', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '52px' }}>
+        <div style={{ fontSize: '15px', fontWeight: '600', letterSpacing: '-0.02em', color: '#fff' }}>
+          crm<span style={{ color: '#555' }}>.</span>
+        </div>
+        <button
+          onClick={handleAddClick}
+          style={{ backgroundColor: '#fff', color: '#000', border: 'none', padding: '7px 14px', borderRadius: '6px', fontWeight: '600', fontSize: '12px', letterSpacing: '-0.01em' }}
+        >
           + Add Lead
         </button>
       </div>
 
-      <div style={{ padding: '28px 32px' }}>
-        <StatsBar refresh={refresh} />
+      <div style={{ padding: '20px' }}>
+
+        {/* Stats */}
+        <StatsBar refresh={refreshCount} />
 
         {/* Search and Filter */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
           <input
-            placeholder="Search by name, email or company..."
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
-            style={{ flex: 1, minWidth: '220px', padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px' }}
+            type="text"
+            placeholder="Search leads..."
+            value={searchText}
+            onChange={handleSearchChange}
+            style={{ flex: '1', padding: '8px 12px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#fff', fontSize: '12px', outline: 'none' }}
           />
           <select
-            value={status}
-            onChange={e => { setStatus(e.target.value); setPage(1); }}
-            style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px' }}
+            value={selectedStatus}
+            onChange={handleStatusChange}
+            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px', outline: 'none' }}
           >
-            {STATUSES.map(s => <option key={s} value={s}>{s || 'All Statuses'}</option>)}
+            <option value="" style={{ backgroundColor: '#000' }}>All statuses</option>
+            <option value="New" style={{ backgroundColor: '#000' }}>New</option>
+            <option value="Contacted" style={{ backgroundColor: '#000' }}>Contacted</option>
+            <option value="Qualified" style={{ backgroundColor: '#000' }}>Qualified</option>
+            <option value="Converted" style={{ backgroundColor: '#000' }}>Converted</option>
+            <option value="Lost" style={{ backgroundColor: '#000' }}>Lost</option>
           </select>
         </div>
 
         {/* Table */}
-        <div style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+        <div style={{ border: '1px solid #1a1a1a', borderRadius: '8px', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                {[
-                  { label: 'Name',    field: 'name' },
-                  { label: 'Email',   field: 'email' },
-                  { label: 'Phone',   field: null },
-                  { label: 'Company', field: 'company' },
-                  { label: 'Status',  field: 'status' },
-                  { label: 'Created', field: 'createdAt' },
-                  { label: 'Actions', field: null },
-                ].map(col => (
-                  <th
-                    key={col.label}
-                    onClick={() => col.field && toggleSort(col.field)}
-                    style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 600, color: '#64748b', cursor: col.field ? 'pointer' : 'default', userSelect: 'none' }}
-                  >
-                    {col.label} {col.field && sort === col.field ? (order === 'asc' ? '↑' : '↓') : ''}
-                  </th>
-                ))}
+              <tr>
+                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Name</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Email</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Company</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Status</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Created</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '500', color: '#333', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #1a1a1a' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {leads.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
-                    No leads found. Add your first lead!
+                  <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#333', fontSize: '13px' }}>
+                    No leads found. Click "+ Add Lead" to add one!
                   </td>
                 </tr>
-              ) : leads.map((lead, i) => (
-                <tr key={lead._id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
-                  <td style={td}><strong>{lead.name}</strong></td>
-                  <td style={td}>{lead.email}</td>
-                  <td style={td}>{lead.phone}</td>
-                  <td style={td}>{lead.company}</td>
-                  <td style={td}><StatusBadge status={lead.status} /></td>
-                  <td style={td}>{new Date(lead.createdAt).toLocaleDateString()}</td>
-                  <td style={td}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => openEdit(lead)} style={editBtn}>Edit</button>
-                      <button onClick={() => handleDelete(lead._id)} style={deleteBtn}>Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              ) : (
+                leads.map(function(lead, index) {
+                  return (
+                    <tr
+                      key={lead._id}
+                      style={{ borderBottom: '1px solid #111' }}
+                      onMouseEnter={function(e) { e.currentTarget.style.backgroundColor = '#080808'; }}
+                      onMouseLeave={function(e) { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    >
+                      <td style={{ padding: '11px 14px', fontSize: '12px', color: '#fff', fontWeight: '500' }}>{lead.name}</td>
+                      <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>{lead.email}</td>
+                      <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>{lead.company}</td>
+                      <td style={{ padding: '11px 14px' }}>
+                        <StatusBadge status={lead.status} />
+                      </td>
+                      <td style={{ padding: '11px 14px', fontSize: '12px', color: '#555' }}>
+                        {new Date(lead.createdAt).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: '11px 14px' }}>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={function() { handleEditClick(lead); }}
+                            style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #222', backgroundColor: '#000', color: '#666', fontSize: '10px' }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={function() { handleDelete(lead._id); }}
+                            style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#333', fontSize: '10px' }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -139,25 +185,38 @@ export default function Dashboard() {
         {/* Pagination */}
         {totalPages > 1 && (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '20px' }}>
-            <button onClick={() => setPage(p => p - 1)} disabled={page === 1} style={pageBtn}>← Prev</button>
-            <span style={{ fontSize: '14px', color: '#64748b' }}>Page {page} of {totalPages} · {total} leads</span>
-            <button onClick={() => setPage(p => p + 1)} disabled={page === totalPages} style={pageBtn}>Next →</button>
+            <button
+              onClick={function() { setCurrentPage(currentPage - 1); }}
+              disabled={currentPage === 1}
+              style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px' }}
+            >
+              Previous
+            </button>
+            <span style={{ fontSize: '12px', color: '#333' }}>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={function() { setCurrentPage(currentPage + 1); }}
+              disabled={currentPage === totalPages}
+              style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #1a1a1a', backgroundColor: '#000', color: '#555', fontSize: '12px' }}
+            >
+              Next
+            </button>
           </div>
         )}
       </div>
 
-      {modalOpen && (
+      {/* Modal */}
+      {showModal && (
         <LeadModal
-          lead={editLead}
-          onClose={() => setModalOpen(false)}
-          onSaved={onSaved}
+          lead={leadToEdit}
+          onClose={handleCloseModal}
+          onSaved={handleLeadSaved}
         />
       )}
+
     </div>
   );
 }
 
-const td        = { padding: '12px 16px', fontSize: '14px', color: '#334155' };
-const editBtn   = { padding: '6px 12px', borderRadius: '6px', border: '1px solid #3b82f6', background: '#eff6ff', color: '#3b82f6', fontSize: '12px', fontWeight: 600 };
-const deleteBtn = { padding: '6px 12px', borderRadius: '6px', border: '1px solid #ef4444', background: '#fef2f2', color: '#ef4444', fontSize: '12px', fontWeight: 600 };
-const pageBtn   = { padding: '8px 16px', borderRadius: '8px', border: '1px solid #ddd', background: '#fff', fontSize: '14px' };
+export default Dashboard;
